@@ -4,11 +4,11 @@ with open("input.txt", "r") as f:
     for line in f:
         input.append(line.strip())
 
-input = [
-    "0 3 6 9 12 15",
-    "1 3 6 10 15 21",
-    "10 13 16 21 30 45",
-]
+# input = [
+#     "0 3 6 9 12 15",
+#     "1 3 6 10 15 21",
+#     "10 13 16 21 30 45",
+# ]
 
 
 def get_diffs(nums):
@@ -16,18 +16,12 @@ def get_diffs(nums):
 
 
 result = 0
-
-# 2013357162 - Too high
-
-# 2005352194 ??
- 
-# 722314526 - Too low
 for line in input:
     nums = [int(num) for num in line.split(" ")]
     diffs = get_diffs(nums)
     diffs_history = []
 
-    while not all(diff == 0 for diff in diffs):
+    while any(diffs):
         diffs_history.append(diffs)
         diffs = get_diffs(diffs)
 
@@ -39,7 +33,6 @@ for line in input:
 
     for i, diff in enumerate(diffs_history[1:]):
         diff.append(diffs_history[i][-1] + diff[-1])
-        # print(temp)
-    print(diffs_history)
+
     result += diffs_history[-1][-1]
 print(result)
