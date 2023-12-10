@@ -5,7 +5,7 @@ use std::io::BufRead;
 use std::io::BufReader;
 use std::sync::mpsc;
 use std::thread;
-
+use threadpool::ThreadPool;
 fn main() {
     let file = File::open("input.txt").expect("Invalid filename");
 
@@ -16,7 +16,7 @@ fn main() {
         .map(|line| line.expect("Cant parse this line"))
         .map(|line| line.trim().to_string())
         .collect();
-
+    //
     // let lines = vec![
     //     "seeds: 79 14 55 13",
     //     "         ",
@@ -53,11 +53,17 @@ fn main() {
     //     "56 93 4",
     // ];
     // 1445869986 - TOO HIGH!
+    // 650599855 - TOO HIGH
+    // 2107309188
     let mut seeds = vec![];
     let mut map_start = false;
     let mut map_name = String::new();
     let mut maps: Vec<(i64, i64, i64, String)> = Vec::new();
 
+    let workers = 5;
+    let pool = ThreadPool::new(workers);
+
+    let chunk_size = 2;
     let (tx, rx) = mpsc::channel();
 
     let mut locations: Vec<i64> = vec![];
@@ -74,7 +80,11 @@ fn main() {
 
         if line.contains("seeds:") {
             seeds = line_nums.clone();
-            seed_chunks = seeds.clone().chunks(2).map(|chunk| chunk.to_vec()).collect();
+            seed_chunks = seeds
+                .clone()
+                .chunks(chunk_size)
+                .map(|chunk| chunk.to_vec())
+                .collect();
         } else if mn_regex.is_match(line) {
             map_name = mn_regex.find(line).unwrap().as_str().to_string();
             map_start = true;
@@ -105,20 +115,48 @@ fn main() {
         seed
     }
 
-    for chunk in seed_chunks {
+    fn chunkify(start: i64, end: i64, chunk_size: i64) -> Vec<Vec<i64>> {
+        let mut subchunks = Vec::new();
+        let mut current_start = start;
+
+        while current_start <= end {
+            let current_end = (current_start + chunk_size - 1).min(end);
+            subchunks.push((current_start..=current_end).collect());
+            current_start = current_end + 1;
+        }
+
+        subchunks
+    }
+    println!("All chunks: {:?}", seed_chunks);
+    for chunk in seed_chunks.clone() {
+        let s = chunk[0];
+        let e = chunk[1];
+
         let maps = maps.clone();
         let tx = tx.clone();
-        let seeds = seeds.clone();
-        thread::spawn(move || {
-            println!("Currently on seed: {:?}", chunk);
-            for i in (0..chunk.len() - 1).step_by(2) {
-                let range_start = seeds[i];
-                let range_end = seeds[i] + seeds[i + 1];
-                for j in range_start..range_end {
+        let start = s.max(e);
+        let end = s.max(e) + s.min(e) - 1;
+
+        pool.execute(move || {
+            println!(
+                "Processing chunk {:?}, chunk size: {}",
+                chunk,
+                (end - start / 2)
+            );
+            for subchunk in chunkify(start, end, (end - start) / 2) {
+                // println!("Currently on subchunk: {:?}", subchunk);
+                let range_start = subchunk[0];
+                let range_end = subchunk.last().unwrap();
+                for j in range_start..*range_end {
                     tx.send(get_location(j, &maps)).unwrap();
                 }
             }
+            // println!("Finished subchunk {:?}", subchunk)
         });
+        // thread::spawn(move || {
+        // });
+
+        // println!("Finished chunk {:?}", chunk)
     }
 
     drop(tx);
@@ -130,6 +168,7 @@ fn main() {
     match minimum {
         Some(minimum) => {
             println!("answer is {}", minimum);
+            // println!("locations is {:?}", locations);
         }
         None => {
             println!("????");
