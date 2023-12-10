@@ -17,44 +17,45 @@ fn main() {
         .map(|line| line.trim().to_string())
         .collect();
     //
-    let lines = vec![
-        "seeds: 79 14 55 13",
-        "         ",
-        "seed-to-soil map:",
-        "50 98 2",
-        "52 50 48",
-        "        ",
-        "soil-to-fertilizer map:",
-        "0 15 37",
-        "37 52 2",
-        "39 0 15",
-        "        ",
-        "fertilizer-to-water map:",
-        "49 53 8",
-        "0 11 42",
-        "42 0 7",
-        "57 7 4",
-        "       ",
-        "water-to-light map:",
-        "88 18 7",
-        "18 25 70",
-        "         ",
-        "light-to-temperature map:",
-        "45 77 23",
-        "81 45 19",
-        "68 64 13",
-        "         ",
-        "temperature-to-humidity map:",
-        "0 69 1",
-        "1 0 69",
-        "       ",
-        "humidity-to-location map:",
-        "60 56 37",
-        "56 93 4",
-    ];
+    // let lines = vec![
+    //     "seeds: 79 14 55 13",
+    //     "         ",
+    //     "seed-to-soil map:",
+    //     "50 98 2",
+    //     "52 50 48",
+    //     "        ",
+    //     "soil-to-fertilizer map:",
+    //     "0 15 37",
+    //     "37 52 2",
+    //     "39 0 15",
+    //     "        ",
+    //     "fertilizer-to-water map:",
+    //     "49 53 8",
+    //     "0 11 42",
+    //     "42 0 7",
+    //     "57 7 4",
+    //     "       ",
+    //     "water-to-light map:",
+    //     "88 18 7",
+    //     "18 25 70",
+    //     "         ",
+    //     "light-to-temperature map:",
+    //     "45 77 23",
+    //     "81 45 19",
+    //     "68 64 13",
+    //     "         ",
+    //     "temperature-to-humidity map:",
+    //     "0 69 1",
+    //     "1 0 69",
+    //     "       ",
+    //     "humidity-to-location map:",
+    //     "60 56 37",
+    //     "56 93 4",
+    // ];
     // 1445869986 - TOO HIGH!
     // 650599855 - TOO HIGH
     // 2107309188
+    // 1240036 - CLOSE
     let mut seeds = vec![];
     let mut map_start = false;
     let mut map_name = String::new();
@@ -136,25 +137,26 @@ fn main() {
         let tx = tx.clone();
         let start = s.max(e);
         let end = s.max(e) + s.min(e) - 1;
-
+        let subchunk_size = (end - start + 1) / workers as i64;
         pool.execute(move || {
             let mut ls: Vec<i64> = vec![];
 
             println!(
                 "Processing chunk {:?}, chunk size: {}",
                 chunk,
-                (end - start / 2)
+                subchunk_size
             );
-            for subchunk in chunkify(start, end, (end - start) / 2) {
+            for subchunk in chunkify(start, end, subchunk_size) {
                 // println!("Currently on subchunk: {:?}", subchunk);
                 let range_start = subchunk[0];
                 let range_end = subchunk.last().unwrap();
-                for j in range_start..*range_end {
+                for j in range_start..=*range_end {
+                    // println!("{} {} {}", range_start, range_end, j);
                     ls.push(get_location(j, &maps));
                 }
             }
             let m = ls.iter().min().unwrap();
-
+            println!("Finished processing chunk {:?}", chunk,);
             tx.send(m.clone()).unwrap();
         });
     }
