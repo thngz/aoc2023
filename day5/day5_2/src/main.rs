@@ -17,41 +17,41 @@ fn main() {
         .map(|line| line.trim().to_string())
         .collect();
     //
-    // let lines = vec![
-    //     "seeds: 79 14 55 13",
-    //     "         ",
-    //     "seed-to-soil map:",
-    //     "50 98 2",
-    //     "52 50 48",
-    //     "        ",
-    //     "soil-to-fertilizer map:",
-    //     "0 15 37",
-    //     "37 52 2",
-    //     "39 0 15",
-    //     "        ",
-    //     "fertilizer-to-water map:",
-    //     "49 53 8",
-    //     "0 11 42",
-    //     "42 0 7",
-    //     "57 7 4",
-    //     "       ",
-    //     "water-to-light map:",
-    //     "88 18 7",
-    //     "18 25 70",
-    //     "         ",
-    //     "light-to-temperature map:",
-    //     "45 77 23",
-    //     "81 45 19",
-    //     "68 64 13",
-    //     "         ",
-    //     "temperature-to-humidity map:",
-    //     "0 69 1",
-    //     "1 0 69",
-    //     "       ",
-    //     "humidity-to-location map:",
-    //     "60 56 37",
-    //     "56 93 4",
-    // ];
+    let lines = vec![
+        "seeds: 79 14 55 13",
+        "         ",
+        "seed-to-soil map:",
+        "50 98 2",
+        "52 50 48",
+        "        ",
+        "soil-to-fertilizer map:",
+        "0 15 37",
+        "37 52 2",
+        "39 0 15",
+        "        ",
+        "fertilizer-to-water map:",
+        "49 53 8",
+        "0 11 42",
+        "42 0 7",
+        "57 7 4",
+        "       ",
+        "water-to-light map:",
+        "88 18 7",
+        "18 25 70",
+        "         ",
+        "light-to-temperature map:",
+        "45 77 23",
+        "81 45 19",
+        "68 64 13",
+        "         ",
+        "temperature-to-humidity map:",
+        "0 69 1",
+        "1 0 69",
+        "       ",
+        "humidity-to-location map:",
+        "60 56 37",
+        "56 93 4",
+    ];
     // 1445869986 - TOO HIGH!
     // 650599855 - TOO HIGH
     // 2107309188
@@ -138,6 +138,8 @@ fn main() {
         let end = s.max(e) + s.min(e) - 1;
 
         pool.execute(move || {
+            let mut ls: Vec<i64> = vec![];
+
             println!(
                 "Processing chunk {:?}, chunk size: {}",
                 chunk,
@@ -148,15 +150,13 @@ fn main() {
                 let range_start = subchunk[0];
                 let range_end = subchunk.last().unwrap();
                 for j in range_start..*range_end {
-                    tx.send(get_location(j, &maps)).unwrap();
+                    ls.push(get_location(j, &maps));
                 }
             }
-            // println!("Finished subchunk {:?}", subchunk)
-        });
-        // thread::spawn(move || {
-        // });
+            let m = ls.iter().min().unwrap();
 
-        // println!("Finished chunk {:?}", chunk)
+            tx.send(m.clone()).unwrap();
+        });
     }
 
     drop(tx);
